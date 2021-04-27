@@ -9,4 +9,8 @@ public class Jobs {
     public Jobs(){
         
     }
+
+    public String coreMemDisk(){
+        return Integer.toString(this.core) + " " + Integer.toString(this.memory) + " " + Integer.toString(this.disk) + "\n";
+    }
 }

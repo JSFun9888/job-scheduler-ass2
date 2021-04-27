@@ -1,7 +1,7 @@
 /*
-COMP3100 Distributed Systems group project
-Authors: Kelly Flett, Scott Lin, Jaime Sun
-Student ID:45350043 , 45985995, 45662398
+COMP3100 Distributed Systems project 2
+Authors: Jaime Sun
+Student ID:45662398
 Practical Session: Wednesday 13:00 - 14:55
 */
 import java.net.*;
@@ -22,13 +22,16 @@ public class AllToLargest {
   public static String OK = "OK\n";
   public static String NONE = "NONE";
   public static String JCPL = "JCPL";
+  public static String GETS_CAPABLE = "GETS Capable";
 
   public ArrayList<Servers> serverList = new ArrayList<Servers>();
   public String serverReply = "";
   public Servers biggestServer = null;
+  public Servers capableServer = null;
   public int coreCount = -1;
   public Jobs currJob;
   public String bigServer = "";
+  public String capServer = "";
   public String[] jobArr = null;
   public String[] serverStringArr = null;
   public static int buffSize = 1000;
@@ -82,14 +85,19 @@ public class AllToLargest {
 
         //send GETS All msg to get a list of servers 
         //but only if not already done
-        atl.getServers(atl, bin, bout, br);
+        //atl.getServers(atl, bin, bout, br);
+        //send gets capable msg
+        atl.getsCapable(atl, bin, bout, br);
         
         //find biggest server if not found already
-        if(atl.biggestServer==null){
-          atl.findBiggestServer(atl);
-        }
-        System.out.println("Checking I am finding the biggest server");
-        System.out.println(atl.bigServer);
+        //if(atl.biggestServer==null){
+        //  atl.findBiggestServer(atl);
+        //}
+        //System.out.println("Checking I am finding the biggest server");
+        //System.out.println(atl.bigServer);
+
+        //get the first capable server
+        atl.capableServer = atl.serverList.get(0);
 
         //create biggest server schedule message then
         //Schedule the job to the biggest server
@@ -208,6 +216,10 @@ public class AllToLargest {
     System.out.println("The biggest Server is: " + atl.bigServer);
   }
 
+  public void capableServerMsg(AllToLargest atl) {
+    atl.capServer = "SCHD " + Integer.toString(atl.currJob.jobID) + " " + atl.capableServer.serverName + " " + Integer.toString(atl.capableServer.serverId) + "\n";
+  }
+
   //get the job information
   public void extractJobInfo(AllToLargest atl){
     atl.currJob.submitTime = Integer.parseInt(atl.jobArr[1]);
@@ -215,12 +227,15 @@ public class AllToLargest {
     atl.currJob.estRuntime = Integer.parseInt(atl.jobArr[3]);
     atl.currJob.core = Integer.parseInt(atl.jobArr[4]);
     atl.currJob.memory = Integer.parseInt(atl.jobArr[5]);
+    atl.currJob.disk = Integer.parseInt(atl.jobArr[6].trim());
     System.out.println(atl.currJob.jobID);
   }
 
   //gets the next job and filters out job completed msgs
   public void jobCapture(AllToLargest atl, BufferedOutputStream bout, BufferedInputStream bin){
     atl.jobArr = atl.serverReply.split(" ");
+    System.out.println("The length of jobArr is: ");
+    System.out.println(atl.jobArr.length);
     if(atl.jobArr[0].equals(JCPL)){
       while(atl.jobArr[0].equals(JCPL)){
         System.out.println("We got a job completed msg!");
@@ -262,11 +277,48 @@ public class AllToLargest {
     }
   }
 
+  //gets capable servers from the server
+  public void getsCapable(AllToLargest atl, BufferedInputStream bin, BufferedOutputStream bout, BufferedReader br) {
+    System.out.println("This is the jobs info:");
+    System.out.println(atl.currJob.core);
+    System.out.println(atl.currJob.memory);
+    System.out.println(atl.currJob.disk);
+    String capable = GETS_CAPABLE + " " + atl.currJob.coreMemDisk();
+    atl.sendMsg(capable, bout);
+
+    atl.readServerMsg(atl, bin);
+      
+    String[] dataArr = atl.serverReply.split(" "); //split response into words
+    atl.sendMsg(OK, bout);
+
+    //read the msg one line at a time
+    atl.readServerMsgDynamic(atl, br, Integer.parseInt(dataArr[1]));
+
+    String[] arrOfStr = atl.serverStringArr; //copy the strings over into arrOfStr
+    //add servers to the server list with their info
+    atl.populateServerList(arrOfStr, atl);
+
+    System.out.println("These are my capable servers:");
+    for(int i = 0; i < arrOfStr.length; i++){
+      System.out.println(arrOfStr[i]);
+    }
+  
+    System.out.println("RCVD in response to ok: " + atl.serverReply);
+    System.out.print("This is my first capable server: " + arrOfStr[0]);
+
+    atl.sendMsg(OK, bout);
+    //get reply from server
+    atl.readServerMsg(atl, bin);
+  }
+
   //creates and sends schedule message to server and reads reply from server
   public void scheduleJob(AllToLargest atl, BufferedInputStream bin, BufferedOutputStream bout){
-    atl.biggestServerMsg(atl);   
-    atl.sendMsg(atl.bigServer, bout);
+    //atl.biggestServerMsg(atl);
+    atl.capableServerMsg(atl);   
+    atl.sendMsg(atl.capServer, bout);
     atl.readServerMsg(atl, bin);
+
+    atl.serverList = new ArrayList<Servers>();
   }
 
   //has the AllToLargest Client quit communicating with the server
