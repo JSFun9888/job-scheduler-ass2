@@ -71,12 +71,12 @@ public class AllToLargest {
         //job capture
         atl.jobCapture(atl, bout, bin);
        
-        System.out.println("Checking what serverReply is: ");
-        System.out.println(atl.serverReply);
+        //System.out.println("Checking what serverReply is: ");
+        //System.out.println(atl.serverReply);
 
         //Exit main loop if no more jobs received "NONE"
         if(atl.jobArr[0].trim().equals(NONE)){
-          System.out.println("NO MORE JOBS RCVD!");
+          //System.out.println("NO MORE JOBS RCVD!");
           break;
         }
 
@@ -86,7 +86,8 @@ public class AllToLargest {
         //send GETS All msg to get a list of servers 
         //but only if not already done
         //atl.getServers(atl, bin, bout, br);
-        //send gets capable msg
+        
+        //wk 8: send gets capable msg
         atl.getsCapable(atl, bin, bout, br);
         
         //find biggest server if not found already
@@ -157,7 +158,7 @@ public class AllToLargest {
   public void sendMsg(String msg, BufferedOutputStream bout) {
     try{
       bout.write(msg.getBytes());
-      System.out.println("SENT: " + msg);
+      //System.out.println("SENT: " + msg);
       bout.flush();
     } catch(Exception e){
       System.out.println(e);
@@ -168,12 +169,13 @@ public class AllToLargest {
   //read and print out the server msg
   public void readServerMsg(AllToLargest atl, BufferedInputStream bin){
     atl.serverReply = atl.readMsg(new byte[buffSize], bin);
-    System.out.println("RCVD in response: " + atl.serverReply);
+    //System.out.println("RCVD in response: " + atl.serverReply);
   }
 
   //read and store the server strings one line at a time
   public void readServerMsgDynamic(AllToLargest atl, BufferedReader br, int arrSize){
 
+    //change this to a list for later
     atl.serverStringArr = new String[arrSize];
       for(int i = 0; i < arrSize ; i++){
         try {
@@ -213,11 +215,14 @@ public class AllToLargest {
   //create the schedule message to send
   public void biggestServerMsg(AllToLargest atl){
     atl.bigServer = "SCHD " + Integer.toString(atl.currJob.jobID) + " " + atl.biggestServer.serverName + " " + Integer.toString(atl.biggestServer.serverId) + "\n";
-    System.out.println("The biggest Server is: " + atl.bigServer);
+    //System.out.println("The biggest Server is: " + atl.bigServer);
   }
 
+  //create a schedule msg for the 1st capable server
   public void capableServerMsg(AllToLargest atl) {
     atl.capServer = "SCHD " + Integer.toString(atl.currJob.jobID) + " " + atl.capableServer.serverName + " " + Integer.toString(atl.capableServer.serverId) + "\n";
+    System.out.println("Scheduling msg: ");
+    System.out.println(atl.capServer);
   }
 
   //get the job information
@@ -234,18 +239,16 @@ public class AllToLargest {
   //gets the next job and filters out job completed msgs
   public void jobCapture(AllToLargest atl, BufferedOutputStream bout, BufferedInputStream bin){
     atl.jobArr = atl.serverReply.split(" ");
-    System.out.println("The length of jobArr is: ");
-    System.out.println(atl.jobArr.length);
     if(atl.jobArr[0].equals(JCPL)){
       while(atl.jobArr[0].equals(JCPL)){
-        System.out.println("We got a job completed msg!");
+        //System.out.println("We got a job completed msg!");
 
         //send REDY msg
         atl.sendMsg(REDY, bout);
 
         //read the reply to REDY
         atl.serverReply = atl.readMsg(new byte[buffSize], bin);
-        System.out.println("RCVD in response to REDY(job completed rdy): " + atl.serverReply);
+        //System.out.println("RCVD in response to REDY(job completed rdy): " + atl.serverReply);
 
         atl.jobArr = atl.serverReply.split(" ");
       }
@@ -269,7 +272,7 @@ public class AllToLargest {
       //add servers to the server list with their info
       atl.populateServerList(arrOfStr, atl);
     
-      System.out.println("RCVD in response to ok: " + atl.serverReply);
+      //System.out.println("RCVD in response to ok: " + atl.serverReply);
 
       atl.sendMsg(OK, bout);
       //get reply from server
@@ -279,10 +282,7 @@ public class AllToLargest {
 
   //gets capable servers from the server
   public void getsCapable(AllToLargest atl, BufferedInputStream bin, BufferedOutputStream bout, BufferedReader br) {
-    System.out.println("This is the jobs info:");
-    System.out.println(atl.currJob.core);
-    System.out.println(atl.currJob.memory);
-    System.out.println(atl.currJob.disk);
+
     String capable = GETS_CAPABLE + " " + atl.currJob.coreMemDisk();
     atl.sendMsg(capable, bout);
 
@@ -303,8 +303,8 @@ public class AllToLargest {
       System.out.println(arrOfStr[i]);
     }
   
-    System.out.println("RCVD in response to ok: " + atl.serverReply);
-    System.out.print("This is my first capable server: " + arrOfStr[0]);
+    //System.out.println("RCVD in response to ok: " + atl.serverReply);
+    System.out.println("This is my first capable server: " + arrOfStr[0]);
 
     atl.sendMsg(OK, bout);
     //get reply from server
