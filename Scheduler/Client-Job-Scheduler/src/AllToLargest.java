@@ -218,7 +218,11 @@ public class AllToLargest {
   public void findCapableServer(AllToLargest atl){
     int lowestCores = Integer.MAX_VALUE;
     for(Servers s: atl.serverList){
-      if(atl.currJob.core - s.cores < lowestCores){
+      if(atl.currJob.core - s.cores == 0){
+        lowestCores = atl.currJob.core - s.cores;
+        atl.capableServer= s;
+        break;
+      } else if(atl.currJob.core - s.cores < lowestCores){
         lowestCores = atl.currJob.core - s.cores;
         atl.capableServer= s;
       }
@@ -303,22 +307,25 @@ public class AllToLargest {
 
   //gets capable servers from the server
   public void getsCapable(AllToLargest atl, BufferedInputStream bin, BufferedOutputStream bout, BufferedReader br) {
-
+    System.out.println("1st debug point 1");
     String capable = GETS_CAPABLE + " " + atl.currJob.coreMemDisk();
     atl.sendMsg(capable, bout);
-
+    
     atl.readServerMsg(atl, bin);
-      
+    System.out.println("1st debug point 1.1");
+    System.out.println(atl.serverReply);
     String[] dataArr = atl.serverReply.split(" "); //split response into words
+    System.out.println(dataArr.length);
     atl.sendMsg(OK, bout);
-
+    System.out.println("1st debug point 1.2");
     //read the msg one line at a time
     atl.readServerMsgDynamic(atl, br, Integer.parseInt(dataArr[1]));
-
+    System.out.println("1st debug point 1.3");
     String[] arrOfStr = atl.serverStringArr; //copy the strings over into arrOfStr
     //add servers to the server list with their info
+    System.out.println("1st debug point 1.4");
     atl.populateServerList(arrOfStr, atl);
-
+    System.out.println("1st debug point 1.5");
     //System.out.println("These are my capable servers:");
     //for(int i = 0; i < arrOfStr.length; i++){
     //  System.out.println(arrOfStr[i]);
@@ -330,17 +337,20 @@ public class AllToLargest {
     atl.sendMsg(OK, bout);
     //get reply from server
     atl.readServerMsg(atl, bin);
+    System.out.println("1st debug point 2");
   }
 
   public void findBestServer(AllToLargest atl, BufferedInputStream bin, BufferedOutputStream bout, BufferedReader br){
-    String available = GETS_CAPABLE + " " + atl.currJob.coreMemDisk();
+    String available = "GETS Avail" + " " + atl.currJob.coreMemDisk();
     System.out.println(atl.currJob.jobID);
     atl.sendMsg(available, bout);
 
     atl.readServerMsg(atl, bin);
     System.out.println(atl.serverReply);
     String[] dataArr = atl.serverReply.split(" "); //split response into words
-    if(Integer.parseInt(dataArr[1]) != 0){
+    System.out.println("Printing the dataArr length:");
+    System.out.println(dataArr.length);
+    if(Integer.parseInt(dataArr[1]) > 0){
       System.out.println("finding gets avail");
       atl.sendMsg(OK, bout);
 
@@ -360,19 +370,41 @@ public class AllToLargest {
       atl.readServerMsg(atl, bin);
 
       System.out.println("Assigning the capable server");
+      ArrayList<Servers> idleList = new ArrayList<Servers>();
+      ArrayList<Servers> activeList = new ArrayList<Servers>();
+      ArrayList<Servers> bootingList = new ArrayList<Servers>();
+      ArrayList<Servers> inactiveList = new ArrayList<Servers>();
       for(Servers s: atl.serverList){
         if(s.cores != 0){
           //System.out.println("core is not equal 0!");
           if(s.cores >= atl.currJob.core){
             //System.out.println(s.serverName);
-            atl.capableServer = s;
+            if(s.state.equals("idle")) {
+              idleList.add(s);
+            } else if(s.state.equals("active")){
+              activeList.add(s);
+            } else if(s.state.equals("booting")){
+              bootingList.add(s);
+            } else {
+              inactiveList.add(s);
+            }
+            
             //System.out.println("Capable server is: ");
             //System.out.println(atl.capableServer.serverName);
-            break;
           }
           
         }
       }
+      if(idleList.size() > 0){
+        atl.capableServer = idleList.get(0);
+      } else if(activeList.size() > 0){
+        atl.capableServer = activeList.get(0);
+      } else if(bootingList.size() > 0){
+        atl.capableServer = bootingList.get(0);
+      } else if(inactiveList.size() > 0){
+        atl.capableServer = inactiveList.get(0);
+      }
+      
       System.out.println("Finished assigning the capable server");
       if(atl.capableServer == null){
         //System.out.println("available was not assigned!");
@@ -381,12 +413,14 @@ public class AllToLargest {
       }
       //atl.capableServer = atl.serverList.get(0);
     } else {
-      //System.out.println("finding gets capable instead");
+      System.out.println("finding gets capable instead");
       atl.sendMsg(OK, bout);
+      atl.readServerMsg(atl, bin);
 
       atl.getsCapable(atl, bin, bout, br);
-
+      System.out.println("1st debug point 3");
       atl.findCapableServer(atl);
+      System.out.println("1st debug point 4");
     }
         
   }
